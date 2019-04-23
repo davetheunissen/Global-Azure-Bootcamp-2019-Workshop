@@ -181,7 +181,7 @@ var map = new atlas.Map("myMap", {
 
 ![BM](Artifacts/BasicMap.png)
 
-### Customize your map
+## Customize your map
 
 To keep things simple and to ensure that this map of the world include New Zealand, we will scope the map to New Zealand specifically.
 Add the following options/settings to the `GetMap()` function, just below the `authOptions` section. 
@@ -190,13 +190,27 @@ style: "night",
 center: [171.7799, -40.838875],
 zoom: 6
 ```
-Refresh the page in your browser and notice, the map is now zoomed in on New Zealand and we've made it dark!
-You might need to tweak the settings to get a better fit for your screen size and if you are after different styles or custom configurations, take a look at the **Map** component section of the docs.
+Refresh the page in your browser and notice, the map is now zoomed in on New Zealand and we've made it dark! 
+You might need to tweak the **center coordinates** and **zoom** settings to get a better fit for your screen size and if you are after different styles or other custom configurations, take a look at the **Map** component section of the docs.
 
 - [Supported Styles](https://docs.microsoft.com/en-us/azure/azure-maps/supported-map-styles)
 - [Map Control Docs](https://docs.microsoft.com/en-us/javascript/api/azure-maps-control/atlas.map?view=azure-iot-typescript-latest)
 
 ![BMNZ](Artifacts/BasicMapNZ.png)
+
+## Lets Add Some Planes!!
+
+Sweet map... but you said there would be planes! Adding the planes to the map is going to require a couple of things so lets kick right into it.
+
+First we need to query the [OpenSky Network](https://opensky-network.org/apidoc/) API to get the flight data. The OpenSky Network provide open air traffic data for research and non-commercial purposes. They do provide more comprehensive licensing models should you need it but for the purposes of this workshop we will use the public endpoint.
+
+To simplify matters further and reduce the payload size, given we have scoped our map map to just New Zealand, the RESTful calls to the public API contain the boundary coordinates for New Zealand so that we only fetch flight data for flights on our map.
+
+In your browser or your favorite http client tool run the following GET request to the OpenSky Network API and familiarize yourself with the response body. Notice the **longitude** and **latitude** query params, these are just a rough estimate. Feel free to tweak these or make up your own all together. If you do change the location, don't forget to update your maps **center coordinates** we set in the previous step otherwise you won't see any flights in your region later on.
+
+- [Here are the docs describing the JSON payload](https://opensky-network.org/apidoc/rest.html#response)
+- [GET Request](https://opensky-network.org/api/states/all?lamin=-50.00&lomin=160.00&lamax=-30.00&lomax=180.00) `https://opensky-network.org/api/states/all?lamin=-50.00&lomin=160.00&lamax=-30.00&lomax=180.00`
+
 
 ### Nuget Packages
 
