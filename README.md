@@ -42,13 +42,35 @@ In this workshop we will be building a realtime flight tracker app that levarges
 
     ![CMR](Artefacts/CreateMapResource.png)
 
-6. Once the new Azure Maps resource has been provision, navigate to the newly deployed resource and select the **Settings Section** on the **Account Tab**. From there make a mental note of the **Keys Tab** as we will need to grab that key later on.
+6. Once the new Azure Maps resource has been provision, navigate to the newly deployed resource and locate the **Authentication** tab under the **Settings** subheading. You will need to grab the key later on.
 
 ## Azure SignalR
 
 [**Azure SignalR from the docs**](https://azure.microsoft.com/en-us/services/signalr-service/)
 
 *Azure SignalR Service is an Azure managed PaaS service to simplify the development, deployment and management of real time web application using SignalR, with Azure supported SLA, scaling, performance and security. The service provides API/SDK/CLI/UI, and rich set of code samples, templates, and demo applications.*
+
+### Create a new Azure SignalR resource
+
+1. In the upper left corner of the portal, click on ![CNR](Artefacts/CreateNewResource.png)
+2. Type in **SingalR** in the search bar and select **SignalR Service** in the dropdown.
+3. Click the **Create** button that appears on the SignalR Service resource page
+
+    ![NSR](Artefacts/NewSignalRResource.png)
+
+4. Enter the following information into the **Create Maps Account** template
+
+    | Name              | Value |
+    | ---               | ---   |
+    | Resource Name     | Give your SignalR Service a meaningful name
+    | Subscription      | Select your subscrption
+    | Resource Group    | Select the resource group created above
+    | Location          | Select a location to deploy your SignalR Service too
+    | Pricing Tier      | Select the **Free** tier [See Pricing Info](https://azure.microsoft.com/en-us/pricing/details/signalr-service/)
+ 
+    ![CSR](Artefacts/CreateSignalRResource.png)
+
+6. Once the new SignalR Service has been provision, navigate to the newly deployed resource and locate the **Keys** tab under the **Settings** subheading. You will need to grab the connection string later on.
 
 ### Nuget Packages
 
