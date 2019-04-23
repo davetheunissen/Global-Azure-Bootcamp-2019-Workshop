@@ -5,7 +5,7 @@
 In this workshop we will be building a (near) real-time flight tracker app that leverages several Azure technologies.
 
 - We will be using Azure Maps to draw the map canvas in our web app.
-- To get the flight information, we will create a timer triggered Azure Function to pull the latest flight data set from the OpenSkys public API. The flight data will then be persisted in a Cosmos Database.
+- To get the flight information, we will create a timer triggered Azure Function to pull the latest flight data set from the OpenSky Network public API. The flight data will then be persisted in a Cosmos Database.
 - We will then create an Azure Function that listens to the Cosmos DB change feed and updates an Azure SignalR hub with all changes to the flight data. 
 - Finally the web app will be configured with a SignalR client to handle the data changes in real-time.
 
@@ -29,7 +29,7 @@ In this workshop we will be building a (near) real-time flight tracker app that 
 2. Type in **Maps** in the search bar and select **Maps** in the dropdown.
 3. Click the **Create** button that appears on the Maps resource page
 
-    ![NMR](Artefacts/NewMapsResource.png)
+    ![NMR](Artifacts/NewMapsResource.png)
 
 4. Enter the following information into the **Create Maps Account** template
 
@@ -206,10 +206,26 @@ First we need to query the [OpenSky Network](https://opensky-network.org/apidoc/
 
 To simplify matters further and reduce the payload size, given we have scoped our map map to just New Zealand, the RESTful calls to the public API contain the boundary coordinates for New Zealand so that we only fetch flight data for flights on our map.
 
-In your browser or your favorite http client tool run the following GET request to the OpenSky Network API and familiarize yourself with the response body. Notice the **longitude** and **latitude** query params, these are just a rough estimate. Feel free to tweak these or make up your own all together. If you do change the location, don't forget to update your maps **center coordinates** we set in the previous step otherwise you won't see any flights in your region later on.
+In your browser or your favorite http client tool run the following GET request to the OpenSky Network API and familiarize yourself with the response body.
 
-- [Here are the docs describing the JSON payload](https://opensky-network.org/apidoc/rest.html#response)
 - [GET Request](https://opensky-network.org/api/states/all?lamin=-50.00&lomin=160.00&lamax=-30.00&lomax=180.00) `https://opensky-network.org/api/states/all?lamin=-50.00&lomin=160.00&lamax=-30.00&lomax=180.00`
+
+Notice the **longitude** and **latitude** query params, these are just a rough estimate. Feel free to tweak these or make up your own all together. If you do change the location, don't forget to update your maps **center coordinates** we set in the previous step otherwise you won't see any flights in your region later on.
+
+In the interest of brevity, I've listed the fields we will be making use of below. For the full list, checkout the [OpenSky Network API Docs](https://opensky-network.org/apidoc/rest.html#response)
+
+| Index | Property          | Type      | Description
+| ---   | ---               | ---       | --- 
+| 0     | icao24            | string    | Unique ICAO 24-bit address of the transponder in hex string representation.
+| 1	    | callsign	        | string	| Callsign of the vehicle (8 chars). Can be null if no callsign has been received.
+| 2	    | origin_country	| string	| Country name inferred from the ICAO 24-bit address.
+| 5	    | longitude	        | float	    | WGS-84 longitude in decimal degrees. Can be null.
+| 6	    | latitude	        | float	    | WGS-84 latitude in decimal degrees. Can be null.
+| 7	    | baro_altitude 	| float	    | Barometric altitude in meters. Can be null.
+| 9	    | velocity	        | float	    | Velocity over ground in m/s. Can be null.
+| 10	| true_track	    | float	    | True track in decimal degrees clockwise from north (north=0°). Can be null.
+
+
 
 
 ### Nuget Packages
