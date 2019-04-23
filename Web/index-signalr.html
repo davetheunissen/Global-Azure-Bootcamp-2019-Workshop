@@ -107,8 +107,6 @@
             pins[flight.id] = newFlightPin;
 
             datasource.setShapes(Object.values(pins));
-            //datasource.remove(flight.id);
-            //datasource.add(newFlightPin);
         }
 
         function getConnectionInfo() {
@@ -126,13 +124,6 @@
                     console.error(err)
                     setTimeout(function () { startConnection(connection) }, 2000)
                 })
-        }
-
-        function GetFlightData() {
-            return axios.get('https://opensky-network.org/api/states/all?lamin=-50.00&lomin=160.00&lamax=-30.00&lomax=180.00')
-                .then(function (response) {
-                    return response;
-                }).catch(console.error)
         }
     </script>
 
