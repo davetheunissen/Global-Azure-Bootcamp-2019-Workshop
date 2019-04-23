@@ -163,6 +163,7 @@ The web app we are going to build is a simple flight tracker app.
  </body>
  </html>
 ```
+
 5. Go ahead and grab the subscription key for your Azure Maps account that you created earlier.
 6. Add the following javascript snippet to the `GetMap()` function and your subscription key to the placeholder.
 
@@ -184,12 +185,14 @@ var map = new atlas.Map("myMap", {
 ## Customize your map
 
 To keep things simple and to ensure that this map of the world include New Zealand, we will scope the map to New Zealand specifically.
-Add the following options/settings to the `GetMap()` function, just below the `authOptions` section. 
+Add the following options/settings to the `GetMap()` function, just below the `authOptions` section.
+
 ```javascript
 style: "night",
 center: [171.7799, -40.838875],
 zoom: 6
 ```
+
 Refresh the page in your browser and notice, the map is now zoomed in on New Zealand and we've made it dark! 
 You might need to tweak the **center coordinates** and **zoom** settings to get a better fit for your screen size and if you are after different styles or other custom configurations, take a look at the **Map** component section of the docs.
 
@@ -215,18 +218,96 @@ Notice the **longitude** and **latitude** query params, these are just a rough e
 In the interest of brevity, I've listed the fields we will be making use of below. For the full list, checkout the [OpenSky Network API Docs](https://opensky-network.org/apidoc/rest.html#response)
 
 | Index | Property          | Type      | Description
-| ---   | ---               | ---       | --- 
+| ---   | ---               | ---       | ---
 | 0     | icao24            | string    | Unique ICAO 24-bit address of the transponder in hex string representation.
-| 1	    | callsign	        | string	| Callsign of the vehicle (8 chars). Can be null if no callsign has been received.
-| 2	    | origin_country	| string	| Country name inferred from the ICAO 24-bit address.
-| 5	    | longitude	        | float	    | WGS-84 longitude in decimal degrees. Can be null.
-| 6	    | latitude	        | float	    | WGS-84 latitude in decimal degrees. Can be null.
-| 7	    | baro_altitude 	| float	    | Barometric altitude in meters. Can be null.
-| 9	    | velocity	        | float	    | Velocity over ground in m/s. Can be null.
-| 10	| true_track	    | float	    | True track in decimal degrees clockwise from north (north=0°). Can be null.
+| 1     | callsign	        | string	| Callsign of the vehicle (8 chars). Can be null if no callsign has been received.
+| 2     | origin_country	| string	| Country name inferred from the ICAO 24-bit address.
+| 5     | longitude	        | float	    | WGS-84 longitude in decimal degrees. Can be null.
+| 6     | latitude	        | float	    | WGS-84 latitude in decimal degrees. Can be null.
+| 7     | baro_altitude 	| float	    | Barometric altitude in meters. Can be null.
+| 9     | velocity	        | float	    | Velocity over ground in m/s. Can be null.
+| 10    | true_track	    | float	    | True track in decimal degrees clockwise from north (north=0°). Can be null.
 
+In order to get the flight data, we will use the lightweight promis based HTTP client [Axios](https://github.com/axios/axios) to make a RESTful request to the OpenSky Network API with the request we just tested above. Add the following html script snippet to your `index.html` file to pull down the axios.js dependancies.
 
+```html
+    <!-- Promis based http client. https://github.com/axios/axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+```
 
+Now add the following simple method below the `GetMap()` function to retrieve the flight data. With the function in place, it's time to render the flights on the map.
+
+```javascript
+function GetFlightData() {
+return axios.get('https://opensky-network.org/api/states/all?lamin=-50.00&lomin=160.00&lamax=-30.00&lomax=180.00')
+    .then(function (response) {
+        return response;
+    }).catch(console.error)
+}
+```
+
+Finally append the below code snippet to the `GetMap()`function. Here we are adding a ready event to the map so that this logic gets executed only after the map has been initialized.
+The snippet below does the following
+
+1. Add a image to use as the plane icon to the maps [ImageSprite](https://docs.microsoft.com/en-us/javascript/api/azure-maps-control/atlas.imagespritemanager?view=azure-iot-typescript-latest) collection. The `.png` referenced here is one that I created and is being served up from blob storage. Feel free to use this one or create your own graphics and get creative.
+
+2. The next step is to create a new [DataSource](https://docs.microsoft.com/en-us/javascript/api/azure-maps-control/atlas.source.datasource?view=azure-iot-typescript-latest) which will keep track of the flight data within the map.
+
+3. Next we create a new map [SymbolLayer](https://docs.microsoft.com/en-us/javascript/api/azure-maps-control/atlas.symbollayeroptions?view=azure-iot-typescript-latest) which describes how we want the flight data stored in the data source to be rendered on the map.
+
+    - In the `iconOptions` section we set the image to the plane icon we added to the ImageSprite later earlier on.
+    - We also set the **rotation** property of the icon using a function which fetches the value from the data source. This will be the **true_track** value in the flight data payload and "points" the icon in the same direction the flight is currently travelling.
+    - In the `textOptions` we add some flight information text which is also fetched from the data source for specific flight. This will render information about the flight next to the icon on the map.
+
+4. Finally make a call to the `GetFlightData()` function we created earlier and foreach flight in the response create a new map [Shape](https://docs.microsoft.com/en-us/javascript/api/azure-maps-control/atlas.shape?view=azure-iot-typescript-latest) and add it to the data source.
+
+    - The **Shape** contains a GeoJSON [Point](https://docs.microsoft.com/en-us/javascript/api/azure-maps-control/atlas.data.point?view=azure-iot-typescript-latest) object which will store the coordinates of a given flight.
+    - Then add some custom properties to the **Shape** to store the **Name, Altitude and Rotation** values of the flight which are used in the **SymbolLayer** above when rendering the flight information on the map.
+
+```javascript
+//Wait until the map resources are ready.
+map.events.add('ready', function () {
+
+    map.imageSprite.add('plane-icon', 'https://dtazfuncdemogsa.blob.core.windows.net/dt-azfuncdemo-blob/plane.png');
+
+    //Create a data source and add it to the map
+    var datasource = new atlas.source.DataSource();
+    map.sources.add(datasource);
+
+    //Create a symbol layer using the data source and add it to the map
+    map.layers.add(
+        new atlas.layer.SymbolLayer(datasource, null, {
+            iconOptions: {
+                ignorePlacement: true,
+                allowOverlap: true,
+                image: 'plane-icon',
+                size: 0.08,
+                rotation: ['get', 'rotation']
+            },
+            textOptions: {
+                textField: ['concat', ['to-string', ['get', 'name']], '- ', ['get', 'altitude']],
+                color: '#FFFFFF',
+                offset: [2, 0]
+            }
+        }));
+
+    GetFlightData().then(function (response) {
+        for (var flight of response.data.states) {
+            var pin = new atlas.Shape(new atlas.data.Point([flight[5], flight[6]]));
+            pin.addProperty('name', flight[1]);
+            pin.addProperty('altitude', flight[7]);
+            pin.addProperty('rotation', flight[10]);
+            datasource.add(pin);
+        }
+    });
+});
+```
+
+Refresh your browser... and TaDa!! You should now see static plane icons on your map representing the actual flights currently over New Zealand. 
+
+![BMFDNZ](Artifacts/BasicMapFlightDataNZ.png)
+
+In Part 2 of the workshop we will now focus on building out the Azure Functions which will provide real time data updates for the flight data on our map
 
 ### Nuget Packages
 

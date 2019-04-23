@@ -17,7 +17,7 @@
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 
     <script>
-        function drawMap() {
+        function GetMap() {
             //Instantiate a map object
             map = new atlas.Map("myMap", {
                 //Add your Azure Maps subscription key to the map SDK. Get an Azure Maps key at https://azure.com/maps
@@ -94,7 +94,7 @@
     </style>
 </head>
 
-<body onload="drawMap()">
+<body onload="GetMap()">
     <div id="myMap"></div>
 </body>
 
