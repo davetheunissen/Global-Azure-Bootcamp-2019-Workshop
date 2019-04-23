@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Map Search</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Add references to the Azure Maps Map control JavaScript and CSS files. -->
+    <link rel="stylesheet" href="https://atlas.microsoft.com/sdk/javascript/mapcontrol/2/atlas.min.css" type="text/css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" />
+
+    <!-- Add a reference to the Azure Maps & Azure Maps Services Module JavaScript files. -->
+    <script src="https://atlas.microsoft.com/sdk/javascript/mapcontrol/2/atlas.min.js"></script>
+    <script src="https://atlas.microsoft.com/sdk/javascript/mapcontrol/2/atlas-service.min.js"></script>
+
+    <!-- Promis based http client. https://github.com/axios/axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/@aspnet/signalr@1.0.2/dist/browser/signalr.js"></script>
+
+    <script>
+        let map;
+        let datasource;
+        let pins = [];
+
+        getConnectionInfo().then(function (info) {
+            let accessToken = info.accessToken
+            const options = {
+                accessTokenFactory: function () {
+                    if (accessToken) {
+                        const _accessToken = accessToken
+                        accessToken = null
+                        return _accessToken
+                    } else {
+                        return getConnectionInfo().then(function (info) {
+                            return info.accessToken
+                        })
+                    }
+                }
+            }
+
+            const connection = new signalR.HubConnectionBuilder()
+                .withUrl(info.url, options)
+                .build()
+
+            connection.on('flightsUpdated', updateFlightData)
+
+            connection.onclose(function () {
+                console.log('disconnected')
+                setTimeout(function () { startConnection(connection) }, 2000)
+            })
+
+            startConnection(connection)
+
+        }).catch(console.error)
+
+        function drawMap() {
+            //Instantiate a map object
+            map = new atlas.Map("myMap", {
+                //Add your Azure Maps subscription key to the map SDK. Get an Azure Maps key at https://azure.com/maps
+                authOptions: {
+                    authType: 'subscriptionKey',
+                    subscriptionKey: ''
+                },
+                style: "night",
+                center: [171.7799, -40.838875],
+                zoom: 6
+            });
+
+            //Wait until the map resources are ready.
+            map.events.add('ready', function () {
+
+                map.imageSprite.add('plane-icon', 'https://dtazfuncdemogsa.blob.core.windows.net/dt-azfuncdemo-blob/plane.png');
+
+                //Create a data source and add it to the map
+                datasource = new atlas.source.DataSource();
+                map.sources.add(datasource);
+
+                //Create a symbol layer using the data source and add it to the map
+                map.layers.add(
+                    new atlas.layer.SymbolLayer(datasource, null, {
+                        iconOptions: {
+                            ignorePlacement: true,
+                            allowOverlap: true,
+                            image: 'plane-icon',
+                            size: 0.08,
+                            rotation: ['get', 'rotation']
+                        },
+                        textOptions: {
+                            textField: ['concat', ['to-string', ['get', 'name']], '- ', ['get', 'altitude']],
+                            color: '#FFFFFF',
+                            offset: [2, 0]
+                        }
+                    })
+                );
+            });
+        }
+
+        function updateFlightData(flight) {
+            //console.log(flight);
+
+            var newFlightPin = new atlas.Shape(new atlas.data.Point([flight.longitute, flight.latitude]), flight.id);
+            newFlightPin.addProperty('name', flight.callsign);
+            newFlightPin.addProperty('altitude', flight.altitude);
+            newFlightPin.addProperty('rotation', flight.trueTrack);
+
+            pins[flight.id] = newFlightPin;
+
+            datasource.setShapes(Object.values(pins));
+            //datasource.remove(flight.id);
+            //datasource.add(newFlightPin);
+        }
+
+        function getConnectionInfo() {
+            return axios.get('http://localhost:7071/api/SignalRInfo')
+                .then(function (response) {
+                    return response.data
+                }).catch(console.error)
+        }
+
+        function startConnection(connection) {
+            console.log('connecting...')
+            connection.start()
+                .then(function () { console.log('connected!') })
+                .catch(function (err) {
+                    console.error(err)
+                    setTimeout(function () { startConnection(connection) }, 2000)
+                })
+        }
+
+        function GetFlightData() {
+            return axios.get('https://opensky-network.org/api/states/all?lamin=-50.00&lomin=160.00&lamax=-30.00&lomax=180.00')
+                .then(function (response) {
+                    return response;
+                }).catch(console.error)
+        }
+    </script>
+
+    <style>
+        html,
+        body {
+            width: 100%;
+            height: 100%;
+            padding: 0;
+            margin: 0;
+        }
+
+        #myMap {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body onload="drawMap()">
+    <div id="myMap"></div>
+</body>
+</html>

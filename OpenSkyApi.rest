@@ -1,0 +1,7 @@
+
+
+###
+# Get all aircraft over New Zealand airspace
+# https://gist.github.com/graydon/11198540
+GET https://opensky-network.org/api/states/all?lamin=-50.00&lomin=160.00&lamax=-30.00&lomax=180.00
+
