@@ -177,9 +177,26 @@ var map = new atlas.Map("myMap", {
 });
 ```
 
-7. Save your changes and open your index file in a browser. You should now see a really basic map of the world.
+7. Save your changes and open your `index.html` file in a browser. You should now see a really basic map of the world.
 
 ![BM](Artifacts/BasicMap.png)
+
+### Customize your map
+
+To keep things simple and to ensure that this map of the world include New Zealand, we will scope the map to New Zealand specifically.
+Add the following options/settings to the `GetMap()` function, just below the `authOptions` section. 
+```javascript
+style: "night",
+center: [171.7799, -40.838875],
+zoom: 6
+```
+Refresh the page in your browser and notice, the map is now zoomed in on New Zealand and we've made it dark!
+You might need to tweak the settings to get a better fit for your screen size and if you are after different styles or custom configurations, take a look at the **Map** component section of the docs.
+
+- [Supported Styles](https://docs.microsoft.com/en-us/azure/azure-maps/supported-map-styles)
+- [Map Control Docs](https://docs.microsoft.com/en-us/javascript/api/azure-maps-control/atlas.map?view=azure-iot-typescript-latest)
+
+![BMNZ](Artifacts/BasicMapNZ.png)
 
 ### Nuget Packages
 
