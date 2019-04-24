@@ -1,4 +1,4 @@
-# Real Time Flight Maps w/ Azure Functions, CosmosDB & SignalR
+# Real Time Flight Map w/ Azure Functions, CosmosDB & SignalR
 
 ## What we will cover
 
@@ -201,9 +201,9 @@ You might need to tweak the **center coordinates** and **zoom** settings to get 
 
 ![BMNZ](Artifacts/BasicMapNZ.png)
 
-## Lets Add Some Planes!!
+## Lets Add Some Flight Data!!
 
-Sweet map... but you said there would be planes! Adding the planes to the map is going to require a couple of things so lets kick right into it.
+Sweet map... but you said there would be planes! Adding the flight data to the map is going to require a couple of things so lets kick right into it.
 
 First we need to query the [OpenSky Network](https://opensky-network.org/apidoc/) API to get the flight data. The OpenSky Network provide open air traffic data for research and non-commercial purposes. They do provide more comprehensive licensing models should you need it but for the purposes of this workshop we will use the public endpoint.
 
