@@ -111,9 +111,9 @@ In this workshop we will be building a (near) real-time flight tracker app that 
 5. Click **Review + Create** and then once the validation has passed, select **Create**
 6. Once the new Cosmos DB instance has been provision, navigate to the newly deployed resource and locate the **Keys** tab under the **Settings** subheading. You will need to grab the connection string later on.
 
-# Creating the Web App
+# Part 1 - Creating a static Web App
 
-The web app we are going to build is a simple flight tracker app. 
+The web app we are going to build is a simple flight tracker app. In part 1 of this session we are going to focus on creating a map of New Zealand that shows static flight data for all current flights over New Zealand air space.
 
 ## Create a new Map
 
