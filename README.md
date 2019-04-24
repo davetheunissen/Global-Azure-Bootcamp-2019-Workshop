@@ -386,7 +386,7 @@ To use the Cosmos DB binding extensions you need to add the [Microsoft.Azure.Web
 
 5. Deserialize the response into the `Flight.cs` data model and add it to the collection of output documents to be persisted in Cosmos DB. 
 
-Your function should end up looking something like below. Notice that the output binding is of type `IAsyncCollector<Flight>`.
+Your function should end up looking something like below. Notice that the output binding is of type `IAsyncCollector<Flight>` which represents the shape of our Cosmos DB documents.
 
 ```csharp
 public static class FlightDataPoll
