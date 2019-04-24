@@ -307,7 +307,118 @@ Refresh your browser... and TaDa!! You should now see static plane icons on your
 
 ![BMFDNZ](Artifacts/BasicMapFlightDataNZ.png)
 
-In Part 2 of the workshop we will now focus on building out the Azure Functions which will provide real time data updates for the flight data on our map
+# Part 2 - Building Azure Functions to enable real time flight data
+
+In Part 2 of the workshop we will now focus on building out the Azure Functions which will enable real time data updates for the flight data on our map.
+The following image describes the flow we are looking to create to enable real time functionality.
+
+![BEF](Artifacts/BackEndFlow.png)
+
+1. A change is made in a Cosmos DB collection
+2. The change event is propagated to the Cosmos DB change feed
+3. An Azure Functions is triggered by the change event using the Cosmos DB trigger
+4. The SignalR Service output binding publishes a message to SignalR Service
+5. SignalR Service publishes the message to all connected clients
+
+[Take a look at the docs if you want to explore this pattern a little further](https://docs.microsoft.com/en-us/azure/azure-signalr/signalr-concept-azure-functions)
+
+## Create the Cosmos DB & Collection
+
+In order to use the Cosmos DB change feed to track changes to the flight data, we are going to need to create a database and collection to store the information in the first place.  
+
+1. In the portal navigate to your Cosmos DB instance we created earlier and open up the **Data Explorer**.
+2. In the top left had corner, select **New Container** which will open up the **Add Container** dialog. Fill in the fields as per the table below.
+
+    | Name          | Value |
+    | ---           | ---   |
+    | Database id   | Select **Create new** and give your database a name. Tick the option to **Provision database throughput**
+    | Throughput    | Leave as the minimum of 400 RUs
+    | Container id  | Give your collection a meaningful name
+    | Partition Key | Set to /originCountry as this will be derived from our data set.
+
+    ![CC](Artifacts/CosmosContainer.png)
+
+3. Select **OK** and after a couple of seconds, you should have your new database and collection provisioned.
+
+4. (Optional) - Navigate to the **Settings** section of your new collection.
+    - Turn on **Time to live** and set the number of seconds a record should remain before being removed.
+    - I've enabled this and set it to 10 min as a quick 'hack' to clear out any stale flight data as that database will constantly be updated with new flight information.
+
+## Timer Triggered Function
+
+In order to get updated flight data we need a mechanism to poll the OpenSky Network APIs for changes. Azure Functions offer [several binding types](https://docs.microsoft.com/en-us/azure/azure-functions/functions-triggers-bindings#supported-bindings), one of which is a Timer Trigger. Timer triggers let you schedule function execution based on a [CRON expression](https://docs.microsoft.com/en-us/azure/azure-functions/functions-bindings-timer#cron-expressions).
+
+1. Open up **Visual Studio 2017** and create a new **Azure Functions** project / solution.
+
+    ![VSNP](Artifacts/VSNewProj.png)
+
+2. Make sure you have Azure Functions v2 selected and search for the Timer trigger function template.
+
+    ![FTT](Artifacts/FuncTimerTrigger.png)
+
+You should now have a scaffolded Timer Triggered Azure Function that looks something like this. Rename your function to something more meaningful like FlightDataTimerPoll. 
+
+- Tweak the timer schedule to something more frequent than 5 minutes so that you get updates more often to your flight data. Here I've opted for 5 seconds so that I can see the planes move on my map later on. 
+
+```CSharp
+public static class FlightDataPoll
+{
+    [FunctionName("FlightDataPoll")]
+    public static void Run([TimerTrigger("*/5 * * * * *")]TimerInfo myTimer
+    ILogger log)
+    {
+        log.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
+    }
+}
+```
+
+The next task is to write the logic to fetch the flight data from the OpenSky API and store it in our database. To do this we are going to make use of the [Cosmos DB Output Binding](https://docs.microsoft.com/en-us/azure/azure-functions/functions-bindings-cosmosdb-v2#output).
+
+To use the Cosmos DB binding extensions you need to add the [Microsoft.Azure.WebJobs.Extensions.CosmosDB](https://www.nuget.org/packages/Microsoft.Azure.WebJobs.Extensions.CosmosDB) nuget package as a dependency to your project.
+
+1. Copy the `Flight.cs` class from the example source code into your project. This class contains some logic for mapping the API response from OpenSky Network so that we can deserialize the response to a C# object. This is not an important implementation detail for this workshop but make a note that we are setting the **id** field to the **icao24** property for simplicity later on.
+
+2. Add the CosmosDB output binding to your function parameters and add the database & collection names to the ones you just created before.
+
+3. Add an app setting to the **local.settings.json** file called `ConnectionStringSetting` and set the value to the connection string for your Cosmos DB instance.
+
+4. Make an http request to the same OpenSky Network API endpoint that we used in Part 1. 
+
+5. Deserialize the response into the `Flight.cs` data model and add it to the collection of output documents to be persisted in Cosmos DB. 
+
+Your function should end up looking something like below. Notice that the output binding is of type `IAsyncCollector<Flight>`.
+
+```csharp
+public static class FlightDataPoll
+{
+    static HttpClient client = new HttpClient();
+
+    [FunctionName("FlightDataPoll")]
+    public static async Task RunAsync(
+        [TimerTrigger("*/5 * * * * *")]TimerInfo myTimer,
+        [CosmosDB(
+            databaseName: "flightsdb",
+            collectionName: "flights",
+             ConnectionStringSetting = "CosmosDBConnection")]IAsyncCollector<Flight> documents,
+         ILogger log)
+    {
+        log.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
+
+         var openSkyUrl = "https://opensky-network.org/api/states/all?lamin=-50.00&lomin=160.00&lamax=-30.00&lomax=180.00";
+
+        using (HttpResponseMessage res = await client.GetAsync(openSkyUrl))
+        using (HttpContent content = res.Content)
+        {
+            var result = JsonConvert.DeserializeObject<Rootobject>(await content.ReadAsStringAsync());
+            foreach (var item in result.states) {
+                await documents.AddAsync(Flight.CreateFromData(item));
+            }
+
+            log.LogInformation($"Total flights processed{result.states.Length}");
+        }
+    }
+}
+```
 
 ### Nuget Packages
 
