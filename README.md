@@ -538,8 +538,127 @@ Run your Function App again and make a request to your **SignalRConnectionInfo**
 
 ![FN](Artifacts/FuncNegotiate.png)
 
+4. The final thing to do for local development only is to set the **CORS** settings for your function app. This is done because locally your functions will be running on localhost but your web app is simply being served up from the file system. Add the following code snippet to your `local.settings.json` file to enable cross origin requests.
+
+```json
+  "Host": {
+    "LocalHttpPort": 7071,
+    "CORS": "*"
+  }
+```
+
 With that done, we are now ready update the client app to connect to SignalR and start receiving real time updates to the flight data on the front end.
 
 
 # Part 3 - Connect the Web App to Azure SignalR
 
+The first thing we need to here is add some logic to connect to SignalR from the client. To do this we will use the [ASP.NET Core SignalR JavaScript Client](https://docs.microsoft.com/en-us/aspnet/core/signalr/javascript-client?view=aspnetcore-2.2) library.
+
+- Add the following script snippet to your `index.html` file to add the **signalR.js** dependencies to your web app.
+
+```html
+<script src="https://unpkg.com/@aspnet/signalr@1.0.2/dist/browser/signalr.js"></script>
+```
+Next we need to add a couple of functions to initiate the connection with the SignalR service.
+
+1. First add a new function that will call the **SignalRConnectionInfo** endpoint that we created just before.
+
+```javascript
+function GetConnectionInfo() {
+    return axios.get('http://localhost:7071/api/negotiate')
+        .then(function (response) {
+            return response.data
+        }).catch(console.error)
+}
+```
+
+2. Next add another function just below to initiate the connection with SignalR. If a connection is established, retry after a couple of seconds. Usually in a real world scenario, you'd use some back-off logic or circuit breaker pattern to better handle this scenario.
+
+```javascript
+function StartConnection(connection) {
+    console.log('connecting...')
+    connection.start()
+        .then(function () { console.log('connected!') })
+        .catch(function (err) {
+            console.error(err)
+            setTimeout(function () { StartConnection(connection) }, 2000)})
+}
+```
+
+3. Now we need to do some refactoring of the Web App so that we can 'redraw' the planes on the map each time we get a new set of flight data.
+
+    - Remove the `GetFlightData()` method we created in Part 1 
+    - Create a new method called `ProcessFlightData(flight)` and add the logic contained in the code snippet below.
+    - Also create two local variables to store a reference to the maps **datasource** and a collection of all the current flight data.
+
+    ```javascript
+    let datasource;
+    let planes = [];
+
+    function ProcessFlightData(flight) {
+        console.log(flight);
+
+        var newFlightPin = new atlas.Shape(new atlas.data.Point([flight.longitute, flight.latitude]), flight.id);
+        newFlightPin.addProperty('name', flight.callsign);
+        newFlightPin.addProperty('altitude', flight.altitude);
+        newFlightPin.addProperty('rotation', flight.trueTrack);
+
+        planes[flight.id] = newFlightPin;
+        datasource.setShapes(Object.values(planes));
+    }
+    ```
+
+    The `ProcessFlightData(flight)` method will be called each time the SignalR connection receives an update from the **flightdata** hub. At which point we create a new **shape** for the map to reflect the new properties, add the shape to the collection of planes in local memory and update the maps **datasource** with the update plane collection values.
+
+4. Remove the call to `GetFlightData()` from the `GetMap()` function as we now handle this in the `ProcessFlightData(flight)` method we just created.
+
+5. Where the datasource is initialized, remove the `var` tag so that it gets set to the local variable we also just created.  
+
+6. The final step is to initialize the **SiganlR** connection and tell the singalR.js client which method to invoke on our web app each time it receives updates.
+
+    - Add the following code snippet to the Map **ready** event so that the connection gets created once the map has been loaded.
+    - This logic makes a request to the `GetConnectionInfo` method to get the url and access token of the SignalR service.
+    - Once a token has been acquired, create a new connection using the `SignalR.HubConnectionBuilder` method, passing in the url and access token as options.
+    - Start the connection and once connected, each time a new message appears in the **newFlightData** hub, make a call to the `ProcessFlightData(flight)` method.
+    - If the connection gets lost, retry starting the connection after a couple of seconds
+
+```javascript
+GetConnectionInfo().then(function (info) {
+    let accessToken = info.accessToken
+    const options = {
+        accessTokenFactory: function () {
+            if (accessToken) {
+                const _accessToken = accessToken
+                accessToken = null
+                return _accessToken
+            } else {
+                return GetConnectionInfo().then(function (info) {
+                    return info.accessToken
+                })
+            }
+        }
+    }
+
+    const connection = new signalR.HubConnectionBuilder()
+        .withUrl(info.url, options)
+        .build()
+
+    StartConnection(connection)
+
+    connection.on('newFlightData', ProcessFlightData)
+
+    connection.onclose(function () {
+        console.log('disconnected')
+        setTimeout(function () { StartConnection(connection) }, 5000)
+    })           
+}).catch(console.error)
+```
+
+#### Thats everything wired up!
+You should now be able to run your Azure Function App, open your web app in a browser and after a couple seconds, see some flights rendered on the map. Open up the console to view trace logs if you want to inspect the flight data objects. 
+
+![RTFLM](Artifacts/RealTimeFlightMap.gif)
+
+Obviously this is only just scratching the surface of what we could do with this particular example or even with other use cases for real time web apps using Azure Functions, CosmosDB and SignalR. I hope you enjoyed this exercise as much as I did putting it together.
+
+Thank You!

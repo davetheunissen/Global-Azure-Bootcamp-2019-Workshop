@@ -14,7 +14,7 @@ namespace FlightDataFunctionApp
 
         [FunctionName("FlightDataPoll")]
         public static async Task RunAsync(
-            [TimerTrigger("*/5 * * * * *")]TimerInfo myTimer,
+            [TimerTrigger("*/1 * * * * *")]TimerInfo myTimer,
             [CosmosDB(
             databaseName: "flightsdb",
             collectionName: "flights",

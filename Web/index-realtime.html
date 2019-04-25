@@ -2,16 +2,15 @@
 <html>
 
 <head>
-    <title>Map Search</title>
+    <title>Live Flight Data Map</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
     <!-- Add references to the Azure Maps Map control JavaScript and CSS files. -->
     <link rel="stylesheet" href="https://atlas.microsoft.com/sdk/javascript/mapcontrol/2/atlas.min.css" type="text/css">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet" />
-
-    <!-- Add a reference to the Azure Maps & Azure Maps Services Module JavaScript files. -->
     <script src="https://atlas.microsoft.com/sdk/javascript/mapcontrol/2/atlas.min.js"></script>
+
+    <!-- Add a reference to the Azure Maps Services Module JavaScript file. -->
     <script src="https://atlas.microsoft.com/sdk/javascript/mapcontrol/2/atlas-service.min.js"></script>
 
     <!-- Promis based http client. https://github.com/axios/axios -->
@@ -19,52 +18,17 @@
     <script src="https://unpkg.com/@aspnet/signalr@1.0.2/dist/browser/signalr.js"></script>
 
     <script>
-        let map;
-        let datasource;
-        let pins = [];
-
-        getConnectionInfo().then(function (info) {
-            let accessToken = info.accessToken
-            const options = {
-                accessTokenFactory: function () {
-                    if (accessToken) {
-                        const _accessToken = accessToken
-                        accessToken = null
-                        return _accessToken
-                    } else {
-                        return getConnectionInfo().then(function (info) {
-                            return info.accessToken
-                        })
-                    }
-                }
-            }
-
-            const connection = new signalR.HubConnectionBuilder()
-                .withUrl(info.url, options)
-                .build()
-
-            connection.on('newFlightData', updateFlightData)
-
-            connection.onclose(function () {
-                console.log('disconnected')
-                setTimeout(function () { startConnection(connection) }, 5000)
-            })
-
-            startConnection(connection)
-
-        }).catch(console.error)
-
         function GetMap() {
             //Instantiate a map object
-            map = new atlas.Map("myMap", {
+            var map = new atlas.Map("myMap", {
                 //Add your Azure Maps subscription key to the map SDK. Get an Azure Maps key at https://azure.com/maps
                 authOptions: {
                     authType: 'subscriptionKey',
-                    subscriptionKey: 'K8peo8i8RrfkRnXri17bDOPGbfW6AzyJ8Q9Si3aDifY'
+                    subscriptionKey: 'vxbFjCskTaHyKTCHQO2cUbePz3ZUEXcxdkR6JJYNASw'
                 },
                 style: "night",
-                center: [171.7799, -40.838875],
-                zoom: 6
+                center: [172.00, -40.00],
+                zoom: 5
             });
 
             //Wait until the map resources are ready.
@@ -93,10 +57,44 @@
                         }
                     })
                 );
+
+                GetConnectionInfo().then(function (info) {
+                    let accessToken = info.accessToken
+                    const options = {
+                        accessTokenFactory: function () {
+                            if (accessToken) {
+                                const _accessToken = accessToken
+                                accessToken = null
+                                return _accessToken
+                            } else {
+                                return GetConnectionInfo().then(function (info) {
+                                    return info.accessToken
+                                })
+                            }
+                        }
+                    }
+
+                    const connection = new signalR.HubConnectionBuilder()
+                        .withUrl(info.url, options)
+                        .build()
+
+                    StartConnection(connection)
+
+                    connection.on('newFlightData', ProcessFlightData)
+
+                    connection.onclose(function () {
+                        console.log('disconnected')
+                        setTimeout(function () { StartConnection(connection) }, 5000)
+                    })
+                }).catch(console.error)
+
             });
         }
 
-        function updateFlightData(flight) {
+        let datasource;
+        let planes = [];
+
+        function ProcessFlightData(flight) {
             console.log(flight);
 
             var newFlightPin = new atlas.Shape(new atlas.data.Point([flight.longitute, flight.latitude]), flight.id);
@@ -104,25 +102,24 @@
             newFlightPin.addProperty('altitude', flight.altitude);
             newFlightPin.addProperty('rotation', flight.trueTrack);
 
-            pins[flight.id] = newFlightPin;
-
-            datasource.setShapes(Object.values(pins));
+            planes[flight.id] = newFlightPin;
+            datasource.setShapes(Object.values(planes));
         }
 
-        function getConnectionInfo() {
+        function GetConnectionInfo() {
             return axios.get('http://localhost:7071/api/negotiate')
                 .then(function (response) {
                     return response.data
                 }).catch(console.error)
         }
 
-        function startConnection(connection) {
+        function StartConnection(connection) {
             console.log('connecting...')
             connection.start()
                 .then(function () { console.log('connected!') })
                 .catch(function (err) {
                     console.error(err)
-                    setTimeout(function () { startConnection(connection) }, 2000)
+                    setTimeout(function () { StartConnection(connection) }, 2000)
                 })
         }
     </script>
@@ -146,4 +143,5 @@
 <body onload="GetMap()">
     <div id="myMap"></div>
 </body>
+
 </html>
