@@ -15,11 +15,11 @@
 
     <!-- Promis based http client. https://github.com/axios/axios -->
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/@aspnet/signalr@1.0.2/dist/browser/signalr.js"></script>
 
     <script>
-        //let flightDataUrl = 'http://localhost:7071/api/GetFlightData'
-        let flightDataUrl = 'https://opensky-network.org/api/states/all?lamin=-50.00&lomin=160.00&lamax=-30.00&lomax=180.00';
-
+        const baseurl = 'http://localhost:7071';
+        //const baseurl = 'https://dt-flightdata-fn.azurewebsites.net';
 
         function GetMap() {
             //Instantiate a map object
@@ -40,7 +40,7 @@
                 map.imageSprite.add('plane-icon', 'https://dtflightappgsa.blob.core.windows.net/site-content/plane.png');
 
                 //Create a data source and add it to the map
-                var datasource = new atlas.source.DataSource();
+                datasource = new atlas.source.DataSource();
                 map.sources.add(datasource);
 
                 //Create a symbol layer using the data source and add it to the map
@@ -61,35 +61,69 @@
                     })
                 );
 
-                GetFlightData().then(function (response) {
-                    for (var flight of response.data.states) {
-                        var pin = new atlas.Shape(new atlas.data.Point([flight[5], flight[6]]));
-                        pin.addProperty('name', flight[1]);
-                        pin.addProperty('altitude', flight[7]);
-                        pin.addProperty('rotation', flight[10]);
-                        datasource.add(pin);
+                GetConnectionInfo().then(function (info) {
+                    let accessToken = info.accessToken
+                    const options = {
+                        accessTokenFactory: function () {
+                            if (accessToken) {
+                                const _accessToken = accessToken
+                                accessToken = null
+                                return _accessToken
+                            } else {
+                                return GetConnectionInfo().then(function (info) {
+                                    return info.accessToken
+                                })
+                            }
+                        }
                     }
-                });
 
-                // GetFlightData().then(function (response) {
-                //     console.log(response);
-                //     for (var flight of response.data) {
-                //         var pin = new atlas.Shape(new atlas.data.Point([flight.longitute, flight.latitude]));
-                //         pin.addProperty('name', flight.callsign);
-                //         pin.addProperty('altitude', flight.altitude);
-                //         pin.addProperty('rotation', flight.trueTrack);
-                //         datasource.add(pin);
-                //     }
-                // });
+                    const connection = new signalR.HubConnectionBuilder()
+                        .withUrl(info.url, options)
+                        .build()
+
+                    StartConnection(connection)
+
+                    connection.on('newFlightData', ProcessFlightData)
+
+                    connection.onclose(function () {
+                        console.log('disconnected')
+                        setTimeout(function () { StartConnection(connection) }, 5000)
+                    })
+                }).catch(console.error)
 
             });
         }
 
-        function GetFlightData() {
-            return axios.get(flightDataUrl)
+        let datasource;
+        let planes = [];
+
+        function ProcessFlightData(flight) {
+            console.log(flight);
+
+            var newFlightPin = new atlas.Shape(new atlas.data.Point([flight.longitute, flight.latitude]), flight.id);
+            newFlightPin.addProperty('name', flight.callsign);
+            newFlightPin.addProperty('altitude', flight.altitude);
+            newFlightPin.addProperty('rotation', flight.trueTrack);
+
+            planes[flight.id] = newFlightPin;
+            datasource.setShapes(Object.values(planes));
+        }
+
+        function GetConnectionInfo() {
+            return axios.get(baseurl + '/api/negotiate')
                 .then(function (response) {
-                    return response;
+                    return response.data
                 }).catch(console.error)
+        }
+
+        function StartConnection(connection) {
+            console.log('connecting...')
+            connection.start()
+                .then(function () { console.log('connected!') })
+                .catch(function (err) {
+                    console.error(err)
+                    setTimeout(function () { StartConnection(connection) }, 2000)
+                })
         }
     </script>
 

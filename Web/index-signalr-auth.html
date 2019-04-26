@@ -18,6 +18,25 @@
     <script src="https://unpkg.com/@aspnet/signalr@1.0.2/dist/browser/signalr.js"></script>
 
     <script>
+        const baseurl = 'http://localhost:7071';
+        //const baseurl = 'https://dt-flightdata-fn.azurewebsites.net';
+        const redirecturl = 'https://dtflightappgsa.z19.web.core.windows.net/index-signalr-auth.html'
+
+        const loginUrl = baseurl + '/.auth/login/aad?post_login_redirect_url=' + redirecturl
+
+        function Authenticate() {
+            console.log(loginUrl);
+            window.location.replace(loginUrl);
+        }
+
+        function GetAuthInfo() {
+            return axios.get(baseurl + '/.auth/me')
+                .then(function (response) {
+                    console.log(response)
+                    return response.data
+                }).catch(console.error);
+        }
+
         function GetMap() {
             //Instantiate a map object
             var map = new atlas.Map("myMap", {
@@ -34,7 +53,7 @@
             //Wait until the map resources are ready.
             map.events.add('ready', function () {
 
-                map.imageSprite.add('plane-icon', 'https://dtflightinfogsa.blob.core.windows.net/flightmapcontent/plane.png');
+                map.imageSprite.add('plane-icon', 'https://dtflightappgsa.blob.core.windows.net/site-content/plane.png');
 
                 //Create a data source and add it to the map
                 datasource = new atlas.source.DataSource();
@@ -107,7 +126,7 @@
         }
 
         function GetConnectionInfo() {
-            return axios.get('http://localhost:7071/api/negotiate')
+            return axios.get(baseurl + '/api/negotiate')
                 .then(function (response) {
                     return response.data
                 }).catch(console.error)
@@ -141,6 +160,9 @@
 </head>
 
 <body onload="GetMap()">
+    <div>
+        <input type="button" onclick="Authenticate()" value="Authenticate"/>
+    </div>
     <div id="myMap"></div>
 </body>
 

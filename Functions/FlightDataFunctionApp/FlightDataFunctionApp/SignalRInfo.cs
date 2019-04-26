@@ -13,9 +13,9 @@ namespace FlightDataFunctionApp
 {
     public static class SignalRInfo
     {
-        [FunctionName("negotiate")]
+        [FunctionName("Negotiate")]
         public static IActionResult Run(
-            [HttpTrigger(AuthorizationLevel.Function)] HttpRequest req,
+            [HttpTrigger(AuthorizationLevel.Anonymous)] HttpRequest req,
             [SignalRConnectionInfo(HubName = "flightdata")] SignalRConnectionInfo connectionInfo,
             ILogger log)
         {
