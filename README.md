@@ -57,7 +57,7 @@ In this workshop we will be building a (near) real-time flight tracker app that 
 ### Create a new Azure SignalR resource
 
 1. In the upper left corner of the portal, click on ![CNR](Artifacts/CreateNewResource.png)
-2. Type in **SingalR** in the search bar and select **SignalR Service** in the dropdown.
+2. Type in **SignalR** in the search bar and select **SignalR Service** in the dropdown.
 3. Click the **Create** button that appears on the SignalR Service resource page
 
     ![NSR](Artifacts/NewSignalRResource.png)
@@ -512,7 +512,7 @@ public static class FlightDataChangeFeed
 
 Once thats done, your functions are all set to go. Let's spin these functions up once again and test out the changes. With the functions running, head on over back the SignalR service in Azure and have a look at the metrics tab. After a couple of minutes you should see some telemetry start to feed through. It can take up to 10-15 minutes before you see data coming through on the metrics blade.
 
-## SingalR Connection Info 
+## SignalR Connection Info 
 
 We have one more function to create before we can update the front end to connect to SignalR and that is the [Connection info input binding](https://docs.microsoft.com/en-us/azure/azure-functions/functions-bindings-signalr-service#signalr-connection-info-input-binding) which provides the client a valid token and the service endpoint for communicating with the SignalR service instance. 
 
@@ -614,7 +614,7 @@ function StartConnection(connection) {
 
 5. Where the datasource is initialized, remove the `var` tag so that it gets set to the local variable we also just created.  
 
-6. The final step is to initialize the **SiganlR** connection and tell the singalR.js client which method to invoke on our web app each time it receives updates.
+6. The final step is to initialize the **SiganlR** connection and tell the signalr.js client which method to invoke on our web app each time it receives updates.
 
     - Add the following code snippet to the Map **ready** event so that the connection gets created once the map has been loaded.
     - This logic makes a request to the `GetConnectionInfo` method to get the url and access token of the SignalR service.
