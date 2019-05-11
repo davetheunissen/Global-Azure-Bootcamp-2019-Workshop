@@ -9,6 +9,8 @@ In this workshop we will be building a (near) real-time flight tracker app that 
 - We will then create an Azure Function that listens to the Cosmos DB change feed and updates an Azure SignalR hub with all changes to the flight data. 
 - Finally the web app will be configured with a SignalR client to handle the data changes in real-time.
 
+[Watch the live demo recording from the Auckland Azure Global Bootcamp 2019](https://www.youtube.com/watch?v=w_G3S6q02JE).
+
 ## What you will need
 
 - Microsoft Azure Account
